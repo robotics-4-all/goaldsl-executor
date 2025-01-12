@@ -32,8 +32,8 @@ class CodeRunner:
     def __init__(self, code: str):
         self._code = code
 
-    def run(self):
-        return self._run_subprocess()
+    def run(self, wait: bool = True):
+        return self._run_subprocess(wait)
 
     def _run_subprocess(self, wait: bool = True):
         self._process = subprocess.Popen(
@@ -55,6 +55,12 @@ class CodeRunner:
             self._stderr_thread.join()
             self._process.wait()
 
+    def force_exit(self):
+        self._process.terminate()
+        self._stdout_thread.join()
+        self._stderr_thread.join()
+        self._process.wait()
+
     def report(self):
         if self._process.returncode != 0:
             logging.error(f"Subprocess failed with return code {self._process.returncode}")
@@ -69,28 +75,35 @@ class GoalDSLExecutorNode(Node):
 
     def start(self):
         self.run()
+        self._init_endpoints()
         while True:
             self.tick()
             self._rate.sleep()
 
     def tick(self):
-        # CodeRunner('print("aaaaaaaaa")').run()
         pass
 
     def _init_endpoints(self):
         execute_model_endpoint = self.create_rpc(
             msg_type=ExecuteModelMsg,
-            rpc_name="goadsl.executor.execute_model",
+            rpc_name=config.EXECUTE_MODEL_RPC,
             on_request=self.on_request_model_execution,
+            workers=2,
         )
+        logging.info(f"Registered RPC endpoint: {config.EXECUTE_MODEL_RPC}")
         self._execute_model_endpoint = execute_model_endpoint
 
     def on_request_model_execution(self, msg: ExecuteModelMsg.Request) -> ExecuteModelMsg.Response:
         print(msg)
-        code = msg.code
-        code_runner = CodeRunner(code)
-        code_runner.run()
-
+        try:
+            model = msg.model
+            code = generate_str(model)
+            code_runner = CodeRunner(code)
+            code_runner.run(wait=False)
+            return ExecuteModelMsg.Response(status=1, result="Model executed successfully!")
+        except Exception as e:
+            logging.error(f"Error executing model: {e}")
+            return ExecuteModelMsg.Response(status=0, result=f"Error executing model: {str(e)}")
 
 
 if __name__ == "__main__":
