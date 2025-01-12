@@ -107,15 +107,16 @@ class GoalDSLExecutorNode(Node):
         self._execute_model_endpoint = execute_model_endpoint
 
     def on_request_model_execution(self, msg: ExecuteModelMsg.Request) -> ExecuteModelMsg.Response:
-        print(msg)
         try:
             model = msg.model
+            logging.error(f"Running code-generator on input model: {model}")
             code = generate_str(model)
+            logging.error(f"Executing code with CodeRunner: {code}")
             code_runner = CodeRunner(code)
             code_runner.run(wait=False)
             return ExecuteModelMsg.Response(status=1, result="Model executed successfully!")
         except Exception as e:
-            logging.error(f"Error executing model: {e}")
+            logging.error(f"Error executing model: {e}", exc_info=False)
             return ExecuteModelMsg.Response(status=0, result=f"Error executing model: {str(e)}")
 
 
