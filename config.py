@@ -14,3 +14,4 @@ EXECUTE_MODEL_RPC = str(os.getenv('EXECUTE_MODEL_RPC', 'goadsl.executor.execute_
 HEARTBEATS = bool(os.getenv('HEARTBEATS', False))
 DEBUG = bool(os.getenv('DEBUG',False))
 EXECUTION_TIMEOUT = float(os.getenv('EXECUTION_TIMEOUT', 3600))
+WAIT_FOR_EXECUTION_TERMINATION = bool(os.getenv('WAIT_FOR_EXECUTION_TERMINATION', False))

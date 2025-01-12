@@ -152,7 +152,7 @@ class GoalDSLExecutorNode(Node):
             code = generate_str(model)
             logging.info("Running code-runner on generated code")
             code_runner = CodeRunner(code)
-            code_runner.run(wait=False)
+            code_runner.run(wait=config.WAIT_FOR_EXECUTION_TERMINATION)
             self._runners.append(code_runner)
             return ExecuteModelMsg.Response(status=1, result="Model executed successfully!")
         except Exception as e:
