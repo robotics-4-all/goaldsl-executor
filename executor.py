@@ -76,8 +76,8 @@ class GoalDSLExecutorNode(Node):
     def start(self):
         logging.info("Starting GoadslExecutorNode...")
         self.report_conn_params()
-        self.run()
         self._init_endpoints()
+        self.run()
         while True:
             self.tick()
             self._rate.sleep()
