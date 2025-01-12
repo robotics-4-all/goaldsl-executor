@@ -117,8 +117,14 @@ if __name__ == "__main__":
     else:
         print("Not a valid broker-type was given!")
         sys.exit(1)
-    conn_params = ConnectionParameters(host=config.BROKER_HOST, port=config.BROKER_PORT,
-                                       username=config.BROKER_USERNAME, password=config.BROKER_PASSWORD)
-    executor = GoalDSLExecutorNode(connection_params=conn_params,
-                                   debug=True,)
+    conn_params = ConnectionParameters(
+        host=config.BROKER_HOST, port=config.BROKER_PORT,
+        username=config.BROKER_USERNAME, password=config.BROKER_PASSWORD,
+        ssl=config.BROKER_SSL
+    )
+    executor = GoalDSLExecutorNode(
+        connection_params=conn_params,
+        debug=config.DEBUG,
+        heartbeats=config.HEARTBEATS
+    )
     executor.start()
