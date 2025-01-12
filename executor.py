@@ -74,6 +74,8 @@ class GoalDSLExecutorNode(Node):
         self._rate = Rate(100)  # 100 Hz
 
     def start(self):
+        logging.info("Starting GoadslExecutorNode...")
+        self.report_conn_params()
         self.run()
         self._init_endpoints()
         while True:
@@ -82,6 +84,18 @@ class GoalDSLExecutorNode(Node):
 
     def tick(self):
         pass
+
+    def report_conn_params(self):
+        logging.info("Connection parameters:")
+        logging.info(f" > Broker type: {config.BROKER_TYPE}")
+        logging.info(f" > Broker host: {config.BROKER_HOST}")
+        logging.info(f" > Broker port: {config.BROKER_PORT}")
+        logging.info(f" > Broker SSL: {config.BROKER_SSL}")
+        logging.info(f" > Broker username: {config.BROKER_USERNAME}")
+        logging.info(f" > Broker password: {config.BROKER_PASSWORD}")
+        logging.info(f" > Execute model RPC: {config.EXECUTE_MODEL_RPC}")
+        logging.info(f" > Heartbeats: {config.HEARTBEATS}")
+        logging.info(f" > Debug: {config.DEBUG}")
 
     def _init_endpoints(self):
         execute_model_endpoint = self.create_rpc(
