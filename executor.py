@@ -87,8 +87,7 @@ class GoalDSLExecutorNode(Node):
         execute_model_endpoint = self.create_rpc(
             msg_type=ExecuteModelMsg,
             rpc_name=config.EXECUTE_MODEL_RPC,
-            on_request=self.on_request_model_execution,
-            workers=2,
+            on_request=self.on_request_model_execution
         )
         logging.info(f"Registered RPC endpoint: {config.EXECUTE_MODEL_RPC}")
         self._execute_model_endpoint = execute_model_endpoint
