@@ -1,8 +1,11 @@
 #! /usr/bin/env python3
 
+import random
+import string
 import subprocess
 import sys
 import threading
+import time
 from commlib.node import Node
 from commlib.utils import Rate
 from commlib.msg import RPCMessage
@@ -28,12 +31,43 @@ class ExecuteModelMsg(RPCMessage):
         result: str = ""
 
 
+class CodeRunnerState:
+    IDLE = 0
+    RUNNING = 1
+    TERMINATED = 2
+
+
 class CodeRunner:
-    def __init__(self, code: str):
+    def __init__(self, code: str, timeout: float = None):
         self._code = code
+        self._state = CodeRunnerState.IDLE
+        self._timeout = timeout
+        self._uid = CodeRunner.generate_random_string()
+
+    @staticmethod
+    def generate_random_string(length: int = 16) -> str:
+        """Generate a random string of fixed length."""
+        letters = string.ascii_lowercase
+        return ''.join(random.choice(letters) for _ in range(length))
+
+    @property
+    def state(self) -> CodeRunnerState:
+        return self._state
+
+    @property
+    def elapsed_time(self) -> float:
+        return round(time.time() - self._start_t, 2)
 
     def run(self, wait: bool = True):
-        return self._run_subprocess(wait)
+        self._state = CodeRunnerState.RUNNING
+        self._start_t = time.time()
+        self._run_subprocess(wait)
+        logging.info(f"Started CodeRunner <{self._uid}>")
+
+    def stop(self):
+        self._state = CodeRunnerState.TERMINATED
+        self.force_exit()
+        logging.info(f"Terminated CodeRunner <{self._uid}>")
 
     def _run_subprocess(self, wait: bool = True):
         self._process = subprocess.Popen(
@@ -47,19 +81,18 @@ class CodeRunner:
                                                args=(self._process.stdout, logging.info))
         self._stderr_thread = threading.Thread(target=stream_logger,
                                                args=(self._process.stderr, logging.error))
+        self._stdout_thread.start()
+        self._stderr_thread.start()
         if wait:
-            self._stdout_thread.start()
-            self._stderr_thread.start()
-
+            self._process.wait()
             self._stdout_thread.join()
             self._stderr_thread.join()
-            self._process.wait()
 
     def force_exit(self):
         self._process.terminate()
-        self._stdout_thread.join()
-        self._stderr_thread.join()
-        self._process.wait()
+        self._stdout_thread.join(1)
+        self._stderr_thread.join(1)
+        self._process.wait(1)
 
     def report(self):
         if self._process.returncode != 0:
@@ -72,6 +105,8 @@ class GoalDSLExecutorNode(Node):
     def __init__(self, *args, **kwargs):
         super().__init__(node_name="goadsl-executor", *args, **kwargs)
         self._rate = Rate(100)  # 100 Hz
+        self._runners = []
+        self._execution_timeout = config.EXECUTION_TIMEOUT  # 2 seconds
 
     def start(self):
         logging.info("Starting GoadslExecutorNode...")
@@ -83,7 +118,11 @@ class GoalDSLExecutorNode(Node):
             self._rate.sleep()
 
     def tick(self):
-        pass
+        for runner in self._runners:
+            timeout_cond = runner.elapsed_time >= self._execution_timeout \
+                if self._execution_timeout is not None else False
+            if runner and runner.state == CodeRunnerState.RUNNING and timeout_cond:
+                runner.stop()
 
     def report_conn_params(self):
         logging.info("Connection parameters:")
@@ -109,11 +148,12 @@ class GoalDSLExecutorNode(Node):
     def on_request_model_execution(self, msg: ExecuteModelMsg.Request) -> ExecuteModelMsg.Response:
         try:
             model = msg.model
-            logging.error(f"Running code-generator on input model: {model}")
+            logging.info("Running code-generator on input model")
             code = generate_str(model)
-            logging.error(f"Executing code with CodeRunner: {code}")
+            logging.info("Running code-runner on generated code")
             code_runner = CodeRunner(code)
             code_runner.run(wait=False)
+            self._runners.append(code_runner)
             return ExecuteModelMsg.Response(status=1, result="Model executed successfully!")
         except Exception as e:
             logging.error(f"Error executing model: {e}", exc_info=False)
