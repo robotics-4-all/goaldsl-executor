@@ -8,7 +8,7 @@ import threading
 import time
 from commlib.node import Node
 from commlib.utils import Rate
-from commlib.msg import RPCMessage
+from commlib.msg import RPCMessage, PubSubMessage
 from goal_dsl.codegen import generate_str
 import config as config
 import logging
@@ -29,6 +29,10 @@ class ExecuteModelMsg(RPCMessage):
     class Response(RPCMessage.Response):
         status: int = 1
         result: str = ""
+
+
+class ExecuteModelAsyncMsg(PubSubMessage):
+    model: str
 
 
 class CodeRunnerState:
@@ -133,6 +137,7 @@ class GoalDSLExecutorNode(Node):
         logging.info(f" > Broker username: {config.BROKER_USERNAME}")
         logging.info(f" > Broker password: {config.BROKER_PASSWORD}")
         logging.info(f" > Execute model RPC: {config.EXECUTE_MODEL_RPC}")
+        logging.info(f" > Execute model Subscriber: {config.EXECUTE_MODEL_SUB}")
         logging.info(f" > Heartbeats: {config.HEARTBEATS}")
         logging.info(f" > Debug: {config.DEBUG}")
 
@@ -143,21 +148,39 @@ class GoalDSLExecutorNode(Node):
             on_request=self.on_request_model_execution
         )
         logging.info(f"Registered RPC endpoint: {config.EXECUTE_MODEL_RPC}")
+        execute_model_async_endpoint = self.create_subscriber(
+            topic=config.EXECUTE_MODEL_SUB,
+            on_message=self.on_message_execute_model,
+            msg_type=ExecuteModelAsyncMsg
+        )
+        logging.info(f"Registered Subscriber endpoint: {config.EXECUTE_MODEL_SUB}")
         self._execute_model_endpoint = execute_model_endpoint
+        self._execute_model_async_endpoint = execute_model_async_endpoint
 
     def on_request_model_execution(self, msg: ExecuteModelMsg.Request) -> ExecuteModelMsg.Response:
+        logging.info(f"Received model execution request")
         try:
             model = msg.model
-            logging.info("Running code-generator on input model")
-            code = generate_str(model)
-            logging.info("Running code-runner on generated code")
-            code_runner = CodeRunner(code)
-            code_runner.run(wait=config.WAIT_FOR_EXECUTION_TERMINATION)
-            self._runners.append(code_runner)
+            self._deploy_model(model)
             return ExecuteModelMsg.Response(status=1, result="Model executed successfully!")
         except Exception as e:
             logging.error(f"Error executing model: {e}", exc_info=False)
             return ExecuteModelMsg.Response(status=0, result=f"Error executing model: {str(e)}")
+
+    def on_message_execute_model(self, msg: ExecuteModelAsyncMsg):
+        logging.info(f"Received model execution request")
+        try:
+            self._deploy_model(msg.model)
+        except Exception as e:
+            logging.error(f"Error deploying model: {e}", exc_info=False)
+
+    def _deploy_model(self, model_str: str):
+        logging.info("Running code-generator on input model")
+        code = generate_str(model_str)
+        logging.info("Running code-runner on generated code")
+        code_runner = CodeRunner(code)
+        code_runner.run(wait=config.WAIT_FOR_EXECUTION_TERMINATION)
+        self._runners.append(code_runner)
 
 
 if __name__ == "__main__":
