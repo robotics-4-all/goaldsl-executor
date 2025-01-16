@@ -3,17 +3,12 @@
 import sys
 import time
 
-from commlib.msg import RPCMessage
+from commlib.msg import PubSubMessage
 from commlib.node import Node
 
 
-class ExecuteModelMsg(RPCMessage):
-    class Request(RPCMessage.Request):
-        model: str
-
-    class Response(RPCMessage.Response):
-        status: int = 1
-        result: str = ""
+class KillAllAsyncMsg(PubSubMessage):
+    pass
 
 
 if __name__ == "__main__":
@@ -30,12 +25,6 @@ if __name__ == "__main__":
     else:
         print("Not a valid broker-type was given!")
         sys.exit(1)
-
-    model_file = "scenario.goal"
-
-    with open(model_file, "r") as f:
-        model = f.read()
-
     conn_params = ConnectionParameters()
 
     node = Node(
@@ -43,11 +32,16 @@ if __name__ == "__main__":
         connection_params=conn_params,
         heartbeats=False,
     )
-    rpc = node.create_rpc_client(
-        msg_type=ExecuteModelMsg, rpc_name="goaldsl.651fc502286950d784cf8022.deploy_sync"
-    )
-    node.run()
 
-    msg = ExecuteModelMsg.Request(model=model)
-    resp = rpc.call(msg)
-    print(resp)
+    pub = node.create_publisher(
+        msg_type=KillAllAsyncMsg, topic="goaldsl.651fc502286950d784cf8022.killall"
+    )
+
+    node.run(wait=True)
+
+    # Create an instance of the request object
+    msg = KillAllAsyncMsg()
+
+    while True:
+        time.sleep(1)
+        pub.publish(msg)

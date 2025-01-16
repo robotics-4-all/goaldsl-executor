@@ -1,5 +1,6 @@
 #! /usr/bin/env python3
 
+import os
 import random
 import string
 import subprocess
@@ -33,6 +34,10 @@ class ExecuteModelMsg(RPCMessage):
 
 class ExecuteModelAsyncMsg(PubSubMessage):
     model: str
+
+
+class KillAllAsyncMsg(PubSubMessage):
+    pass
 
 
 class CodeRunnerState:
@@ -69,13 +74,12 @@ class CodeRunner:
         logging.info(f"Started CodeRunner <{self._uid}>")
 
     def stop(self):
-        self._state = CodeRunnerState.TERMINATED
         self.force_exit()
-        logging.info(f"Terminated CodeRunner <{self._uid}>")
 
     def _run_subprocess(self, wait: bool = True):
         self._process = subprocess.Popen(
             ["python3", "-c", self._code],
+            env={**os.environ, "UID": config.UID},
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
@@ -91,12 +95,16 @@ class CodeRunner:
             self._process.wait()
             self._stdout_thread.join()
             self._stderr_thread.join()
+            self._state = CodeRunnerState.TERMINATED
+            logging.warning(f"CodeRunner <PID:{self._process.pid}> terminated")
 
     def force_exit(self):
-        self._process.terminate()
+        self._process.kill()
         self._stdout_thread.join(1)
         self._stderr_thread.join(1)
         self._process.wait(1)
+        self._state = CodeRunnerState.TERMINATED
+        logging.warning(f"CodeRunner <PID:{self._process.pid}> forcefully terminated")
 
     def report(self):
         if self._process.returncode != 0:
@@ -127,6 +135,9 @@ class GoalDSLExecutorNode(Node):
                 if self._execution_timeout is not None else False
             if runner and runner.state == CodeRunnerState.RUNNING and timeout_cond:
                 runner.stop()
+        for runner in self._runners:
+            if runner.state == CodeRunnerState.TERMINATED:
+                self._runners.remove(runner)
 
     def report_conn_params(self):
         logging.info("Connection parameters:")
@@ -154,11 +165,18 @@ class GoalDSLExecutorNode(Node):
             msg_type=ExecuteModelAsyncMsg
         )
         logging.info(f"Registered Subscriber endpoint: {config.EXECUTE_MODEL_SUB}")
+        kill_all_goals_sub = self.create_subscriber(
+            topic=config.KILL_ALL_GOALS_SUB,
+            on_message=self.on_message_killall,
+            msg_type=KillAllAsyncMsg
+        )
+        logging.info(f"Registered Subscriber endpoint: {config.KILL_ALL_GOALS_SUB}")
         self._execute_model_endpoint = execute_model_endpoint
         self._execute_model_async_endpoint = execute_model_async_endpoint
+        self._kill_all_goals_sub = kill_all_goals_sub
 
     def on_request_model_execution(self, msg: ExecuteModelMsg.Request) -> ExecuteModelMsg.Response:
-        logging.info(f"Received model execution request")
+        logging.info("Received model execution request")
         try:
             model = msg.model
             self._deploy_model(model)
@@ -168,11 +186,20 @@ class GoalDSLExecutorNode(Node):
             return ExecuteModelMsg.Response(status=0, result=f"Error executing model: {str(e)}")
 
     def on_message_execute_model(self, msg: ExecuteModelAsyncMsg):
-        logging.info(f"Received model execution request")
+        logging.info("Received model execution request")
         try:
             self._deploy_model(msg.model)
         except Exception as e:
             logging.error(f"Error deploying model: {e}", exc_info=False)
+
+    def on_message_killall(self, msg: KillAllAsyncMsg):
+        logging.warning("Received KillAll request!!!")
+        try:
+            for runner in self._runners:
+                runner.force_exit()
+        except Exception as e:
+            logging.error(f"Error while terminating goal executions in coderunner: {e}",
+                          exc_info=False)
 
     def _deploy_model(self, model_str: str):
         logging.info("Running code-generator on input model")
