@@ -79,7 +79,7 @@ class CodeRunner:
     def _run_subprocess(self, wait: bool = True):
         self._process = subprocess.Popen(
             ["python3", "-c", self._code],
-            env={**os.environ, "UID": config.UID},
+            env={**os.environ, "U_ID": self._uid},
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
