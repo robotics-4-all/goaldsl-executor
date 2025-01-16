@@ -41,7 +41,7 @@ if __name__ == "__main__":
     )
 
     rpc = node.create_rpc_client(
-        msg_type=ExecuteModelMsg, rpc_name="goaldsl.651fc502286950d784cf8022.deploy_sync"
+        msg_type=ExecuteModelMsg, rpc_name="goaldsl.6530f9263773c5f7858b6b33.deploy_sync"
     )
 
     node.run()

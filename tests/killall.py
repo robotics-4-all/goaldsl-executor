@@ -34,7 +34,7 @@ if __name__ == "__main__":
     )
 
     pub = node.create_publisher(
-        msg_type=KillAllAsyncMsg, topic="goaldsl.651fc502286950d784cf8022.killall"
+        msg_type=KillAllAsyncMsg, topic="goaldsl.6530f9263773c5f7858b6b33.killall"
     )
 
     node.run(wait=True)
