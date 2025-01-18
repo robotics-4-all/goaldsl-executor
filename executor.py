@@ -74,15 +74,17 @@ class CodeRunner:
         logging.info(f"Started CodeRunner <{self._uid}>")
 
     def stop(self):
+        logging.warning(f'Stopping CodeRunner {self._uid}...')
         self.force_exit()
 
     def _run_subprocess(self, wait: bool = True):
+        logging.info(f"Running Subprocess {self._uid} with flag wait={wait}...")
         self._process = subprocess.Popen(
             ["python3", "-c", self._code],
             env={**os.environ.copy(), "U_ID": self._uid},
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            shell=True,
+            # shell=True,
             text=True,
             bufsize=1
         )
@@ -93,11 +95,12 @@ class CodeRunner:
         self._stdout_thread.start()
         self._stderr_thread.start()
         if wait:
+            logging.warning(f"Waiting for Coderunner <UID:{self._uid}> to terminate")
             self._process.wait()
             self._stdout_thread.join()
             self._stderr_thread.join()
             self._state = CodeRunnerState.TERMINATED
-            logging.warning(f"CodeRunner <PID:{self._process.pid}> terminated")
+            logging.warning(f"CodeRunner <UID:{self._uid}> terminated")
 
     def force_exit(self):
         self._process.kill()
