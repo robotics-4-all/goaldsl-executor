@@ -182,8 +182,7 @@ class GoalDSLExecutorNode(Node):
     def on_request_model_execution(self, msg: ExecuteModelMsg.Request) -> ExecuteModelMsg.Response:
         logging.info("Received model execution request")
         try:
-            model = msg.model
-            self._deploy_model(model)
+            self._deploy_model(msg.model)
             return ExecuteModelMsg.Response(status=1, result="Model executed successfully!")
         except Exception as e:
             logging.error(f"Error executing model: {e}", exc_info=False)
