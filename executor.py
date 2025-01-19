@@ -94,6 +94,7 @@ class CodeRunner:
                                                args=(self._process.stderr, logging.error))
         self._stdout_thread.start()
         self._stderr_thread.start()
+        logging.info("Started subprocess and logging threads")
         if wait:
             logging.warning(f"Waiting for Coderunner <UID:{self._uid}> to terminate")
             self._process.wait()
