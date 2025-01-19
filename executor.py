@@ -81,7 +81,7 @@ class CodeRunner:
         logging.info(f"Running Subprocess {self._uid} with flag wait={wait}...")
         self._process = subprocess.Popen(
             ["python3", "-c", self._code],
-            env={**os.environ.copy(), "U_ID": self._uid},
+            env={"U_ID": self._uid},
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             # shell=True,
