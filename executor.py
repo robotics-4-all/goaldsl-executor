@@ -81,20 +81,21 @@ class CodeRunner:
         logging.info(f"Running Subprocess {self._uid} with flag wait={wait}...")
         self._process = subprocess.Popen(
             ["python3", "-c", self._code],
-            env={"U_ID": self._uid},
+            env={**os.environ.copy(), "U_ID": self._uid},
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             # shell=True,
             text=True,
             bufsize=1
         )
+        logging.info("Process started successfully")
         self._stdout_thread = threading.Thread(target=stream_logger,
                                                args=(self._process.stdout, logging.info))
         self._stderr_thread = threading.Thread(target=stream_logger,
                                                args=(self._process.stderr, logging.error))
         self._stdout_thread.start()
         self._stderr_thread.start()
-        logging.info("Started subprocess and logging threads")
+        logging.info("Started logging threads")
         if wait:
             logging.warning(f"Waiting for Coderunner <UID:{self._uid}> to terminate")
             self._process.wait()
