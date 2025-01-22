@@ -40,7 +40,7 @@ class KillAllAsyncMsg(PubSubMessage):
     pass
 
 
-class KillAllAsyncMsg(RPCMessage):
+class KillAllRPCMsg(RPCMessage):
     class Request(RPCMessage.Request):
         pass
     class Response(RPCMessage.Response):
@@ -186,7 +186,7 @@ class GoalDSLExecutorNode(Node):
         )
         logging.info(f"Registered RPC endpoint: {config.EXECUTE_MODEL_RPC}")
         killall_goals_rpc = self.create_rpc(
-            msg_type=ExecuteModelMsg,
+            msg_type=KillAllRPCMsg,
             rpc_name=config.KILL_ALL_GOALS_RPC,
             on_request=self.on_request_killall
         )
@@ -217,14 +217,14 @@ class GoalDSLExecutorNode(Node):
             logging.error(f"Error executing model: {e}", exc_info=False)
             return ExecuteModelMsg.Response(status=0, result=f"Error executing model: {str(e)}")
 
-    def on_request_killall(self, msg: KillAllAsyncMsg.Request) -> KillAllAsyncMsg.Response:
+    def on_request_killall(self, msg: KillAllRPCMsg.Request) -> KillAllRPCMsg.Response:
         logging.info("Received KillAll request")
         try:
             self._killall_goals()
-            return KillAllAsyncMsg.Response(result="KillAll GoalDSL CodeRunners was successfully!")
+            return KillAllRPCMsg.Response(result="KillAll GoalDSL CodeRunners was successfully!")
         except Exception as e:
             logging.error(f"Error killing GoalDSL CodeRunners: {e}", exc_info=False)
-            return KillAllAsyncMsg.Response(status=0, result=f"Error killing GoalDSL CodeRunners: {str(e)}")
+            return KillAllRPCMsg.Response(status=0, result=f"Error killing GoalDSL CodeRunners: {str(e)}")
 
     def on_message_execute_model(self, msg: ExecuteModelAsyncMsg):
         logging.info("Received model execution request")
