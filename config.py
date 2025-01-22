@@ -3,6 +3,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+LOCAL_REDIS = bool(os.getenv('LOCAL_REDIS', 'True') in ("True", "true"))
 BROKER_TYPE = str(os.getenv('BROKER_TYPE', 'REDIS'))
 BROKER_HOST = str(os.getenv('BROKER_HOST', 'localhost'))
 BROKER_PORT = int(os.getenv('BROKER_PORT', 6379))
@@ -18,3 +19,4 @@ DEBUG = bool(os.getenv('DEBUG', 'False') in ("True", "true"))
 EXECUTION_TIMEOUT = float(os.getenv('EXECUTION_TIMEOUT', 3600))
 WAIT_FOR_EXECUTION_TERMINATION = bool(os.getenv('WAIT_FOR_EXECUTION_TERMINATION', 'False') in ("True", "true"))
 KILL_ALL_GOALS_SUB = str(os.getenv('KILL_ALL_GOALS_SUB', 'goaldsl.{ID}.killall')).replace('{ID}', UID)
+KILL_ALL_GOALS_RPC = str(os.getenv('KILL_ALL_GOALS_RPC', 'goaldsl.{ID}.killall_sync')).replace('{ID}', UID)

@@ -40,6 +40,14 @@ class KillAllAsyncMsg(PubSubMessage):
     pass
 
 
+class KillAllAsyncMsg(RPCMessage):
+    class Request(RPCMessage.Request):
+        pass
+    class Response(RPCMessage.Response):
+        status: int = 1
+        error: str = ""
+
+
 class CodeRunnerState:
     IDLE = 0
     RUNNING = 1
@@ -120,20 +128,31 @@ class CodeRunner:
 
 
 class GoalDSLExecutorNode(Node):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, local_redis: bool = False, *args, **kwargs):
         super().__init__(node_name="goadsl-executor", *args, **kwargs)
         self._rate = Rate(100)  # 100 Hz
+        self._local_redis = local_redis
         self._runners = []
         self._execution_timeout = config.EXECUTION_TIMEOUT  # 2 seconds
+        self._thread = None
+        self._tstop_event = threading.Event()
 
     def start(self):
         logging.info("Starting GoadslExecutorNode...")
         self.report_conn_params()
         self._init_endpoints()
         self.run()
-        while True:
+        threading.Thread(target=self._run_tick_loop, daemon=True).start()
+
+    def _run_tick_loop(self):
+        while not self._tstop_event.is_set():
             self.tick()
             self._rate.sleep()
+
+    def stop(self):
+        logging.info("Stopping GoadslExecutorNode...")
+        self._tstop_event.set()
+        self._thread.join(1)
 
     def tick(self):
         for runner in self._runners:
@@ -147,24 +166,31 @@ class GoalDSLExecutorNode(Node):
 
     def report_conn_params(self):
         logging.info("Connection parameters:")
-        logging.info(f" > Broker type: {config.BROKER_TYPE}")
-        logging.info(f" > Broker host: {config.BROKER_HOST}")
-        logging.info(f" > Broker port: {config.BROKER_PORT}")
-        logging.info(f" > Broker SSL: {config.BROKER_SSL}")
-        logging.info(f" > Broker username: {config.BROKER_USERNAME}")
-        logging.info(f" > Broker password: {config.BROKER_PASSWORD}")
-        logging.info(f" > Execute model RPC: {config.EXECUTE_MODEL_RPC}")
-        logging.info(f" > Execute model Subscriber: {config.EXECUTE_MODEL_SUB}")
-        logging.info(f" > Heartbeats: {config.HEARTBEATS}")
-        logging.info(f" > Debug: {config.DEBUG}")
+        logging.info(self._conn_params)
+        # logging.info(f" > Broker type: {config.BROKER_TYPE}")
+        # logging.info(f" > Broker host: {config.BROKER_HOST}")
+        # logging.info(f" > Broker port: {config.BROKER_PORT}")
+        # logging.info(f" > Broker SSL: {config.BROKER_SSL}")
+        # logging.info(f" > Broker username: {config.BROKER_USERNAME}")
+        # logging.info(f" > Broker password: {config.BROKER_PASSWORD}")
+        # logging.info(f" > Execute model RPC: {config.EXECUTE_MODEL_RPC}")
+        # logging.info(f" > Execute model Subscriber: {config.EXECUTE_MODEL_SUB}")
+        # logging.info(f" > Heartbeats: {config.HEARTBEATS}")
+        # logging.info(f" > Debug: {config.DEBUG}")
 
     def _init_endpoints(self):
-        execute_model_endpoint = self.create_rpc(
+        execute_model_rpc = self.create_rpc(
             msg_type=ExecuteModelMsg,
             rpc_name=config.EXECUTE_MODEL_RPC,
             on_request=self.on_request_model_execution
         )
         logging.info(f"Registered RPC endpoint: {config.EXECUTE_MODEL_RPC}")
+        killall_goals_rpc = self.create_rpc(
+            msg_type=ExecuteModelMsg,
+            rpc_name=config.KILL_ALL_GOALS_RPC,
+            on_request=self.on_request_killall
+        )
+        logging.info(f"Registered RPC endpoint: {config.KILL_ALL_GOALS_RPC}")
         execute_model_async_endpoint = self.create_subscriber(
             topic=config.EXECUTE_MODEL_SUB,
             on_message=self.on_message_execute_model,
@@ -177,9 +203,10 @@ class GoalDSLExecutorNode(Node):
             msg_type=KillAllAsyncMsg
         )
         logging.info(f"Registered Subscriber endpoint: {config.KILL_ALL_GOALS_SUB}")
-        self._execute_model_endpoint = execute_model_endpoint
+        self._execute_model_endpoint = execute_model_rpc
         self._execute_model_async_endpoint = execute_model_async_endpoint
         self._kill_all_goals_sub = kill_all_goals_sub
+        self._kill_all_goals_rpc = killall_goals_rpc
 
     def on_request_model_execution(self, msg: ExecuteModelMsg.Request) -> ExecuteModelMsg.Response:
         logging.info("Received model execution request")
@@ -189,6 +216,15 @@ class GoalDSLExecutorNode(Node):
         except Exception as e:
             logging.error(f"Error executing model: {e}", exc_info=False)
             return ExecuteModelMsg.Response(status=0, result=f"Error executing model: {str(e)}")
+
+    def on_request_killall(self, msg: KillAllAsyncMsg.Request) -> KillAllAsyncMsg.Response:
+        logging.info("Received KillAll request")
+        try:
+            self._killall_goals()
+            return KillAllAsyncMsg.Response(result="KillAll GoalDSL CodeRunners was successfully!")
+        except Exception as e:
+            logging.error(f"Error killing GoalDSL CodeRunners: {e}", exc_info=False)
+            return KillAllAsyncMsg.Response(status=0, result=f"Error killing GoalDSL CodeRunners: {str(e)}")
 
     def on_message_execute_model(self, msg: ExecuteModelAsyncMsg):
         logging.info("Received model execution request")
@@ -200,11 +236,14 @@ class GoalDSLExecutorNode(Node):
     def on_message_killall(self, msg: KillAllAsyncMsg):
         logging.warning("Received KillAll request!!!")
         try:
-            for runner in self._runners:
-                runner.force_exit()
+            self._killall_goals()
         except Exception as e:
             logging.error(f"Error while terminating goal executions in coderunner: {e}",
                           exc_info=False)
+
+    def _killall_goals(self):
+        for runner in self._runners:
+            runner.force_exit()
 
     def _deploy_model(self, model_str: str):
         logging.info("Running code-generator on input model")
@@ -237,3 +276,13 @@ if __name__ == "__main__":
         heartbeats=config.HEARTBEATS
     )
     executor.start()
+    if config.LOCAL_REDIS:
+        from commlib.transports.redis import ConnectionParameters as RedisConnParams
+        local_executor = GoalDSLExecutorNode(
+            connection_params=RedisConnParams(),
+            debug=config.DEBUG,
+            heartbeats=config.HEARTBEATS
+        )
+        local_executor.start()
+    while True:
+        time.sleep(0.01)
