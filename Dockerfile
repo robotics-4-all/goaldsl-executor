@@ -14,6 +14,8 @@ RUN bash /setup_deps.sh
 
 COPY ./ /goalexecutor
 
+COPY ./entrypoint.sh /entrypoint.sh
+
 ENV LOCAL_REDIS=True
 ENV BROKER_TYPE=MQTT
 ENV BROKER_HOST=localhost
@@ -23,5 +25,4 @@ ENV BROKER_USERNAME=guest
 ENV BROKER_PASSWORD=guest
 ENV UID=123
 
-CMD ["python", "executor.py"]
-
+ENTRYPOINT ["/bin/sh", "/entrypoint.sh"]

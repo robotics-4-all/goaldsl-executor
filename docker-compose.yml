@@ -1,0 +1,7 @@
+services:
+  goalexecutor:
+    image: goalexecutor
+    entrypoint: ["/bin/sh", "/entrypoint.sh"]
+    network_mode: host
+    env_file:
+      - ./.env
