@@ -237,11 +237,12 @@ class GoalDSLExecutorNode(Node):
 
     def _deploy_model(self, model_str: str):
         logging.info("Running code-generator on input model")
-        code = generate_str(model_str)
+        scenario_code: dict = generate_str(model_str)
         logging.info("Running code-runner on generated code")
-        code_runner = CodeRunner(code)
-        code_runner.run(wait=config.WAIT_FOR_EXECUTION_TERMINATION)
-        self._runners.append(code_runner)
+        for name, code in scenario_code.items():
+            code_runner = CodeRunner(code)
+            code_runner.run(wait=config.WAIT_FOR_EXECUTION_TERMINATION)
+            self._runners.append(code_runner)
 
 
 if __name__ == "__main__":
