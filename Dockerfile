@@ -2,7 +2,7 @@ FROM python:3.10
 
 WORKDIR /goalexecutor
 
-RUN apt-get update && apt upgrade  -y
+RUN apt update && apt upgrade  -y
 
 COPY ./requirements.txt /requirements.txt
 
