@@ -10,7 +10,7 @@ import time
 from commlib.node import Node
 from commlib.utils import Rate
 from commlib.msg import RPCMessage, PubSubMessage
-from goal_dsl.codegen import generate_str
+from goal_dsl.generator import m2t_python_str
 import config as config
 import logging
 
@@ -237,7 +237,7 @@ class GoalDSLExecutorNode(Node):
 
     def _deploy_model(self, model_str: str):
         logging.info("Running code-generator on input model")
-        scenario_code: dict = generate_str(model_str)
+        scenario_code: dict = m2t_python_str(model_str)
         logging.info("Running code-runner on generated code")
         for name, code in scenario_code.items():
             code_runner = CodeRunner(code)
