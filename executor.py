@@ -14,9 +14,12 @@ from goal_dsl.generator import m2t_python_str
 import config as config
 import logging
 
-# Set up logging
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(message)s")
 
+# Set up logging
+logging.basicConfig(format="%(asctime)s - %(message)s")
+if config.ZERO_LOGS: logging.disable()
+else: logging.getLogger().setLevel(config.LOG_LEVEL)
+# -------------------------------------------------------------
 
 def stream_logger(stream, log_func):
     for line in iter(stream.readline, ""):
