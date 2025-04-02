@@ -270,10 +270,14 @@ if __name__ == "__main__":
         heartbeats=config.HEARTBEATS
     )
     executor.start()
-    if config.LOCAL_REDIS:
+    if config.USE_REDIS:
         from commlib.transports.redis import ConnectionParameters as RedisConnParams
         local_executor = GoalDSLExecutorNode(
-            connection_params=RedisConnParams(),
+            connection_params=RedisConnParams(
+                host=config.REDIS_HOST, port=config.REDIS_PORT,
+                username=config.REDIS_USERNAME, password=config.REDIS_PASSWORD,
+                db=config.REDIS_DB
+            ),
             debug=config.DEBUG,
             heartbeats=config.HEARTBEATS
         )

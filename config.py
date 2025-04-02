@@ -3,7 +3,14 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-LOCAL_REDIS = bool(os.getenv('LOCAL_REDIS', 'True') in ("True", "true"))
+USE_REDIS = int(os.getenv('USE_REDIS', 1))
+REDIS_HOST = os.getenv('REDIS_HOST', 'localhost')
+REDIS_PORT = int(os.getenv('REDIS_PORT', 6379))
+REDIS_USERNAME = os.getenv('REDIS_USERNAME', '')
+REDIS_PASSWORD = os.getenv('REDIS_PASSWORD', '')
+REDIS_DB = int(os.getenv('REDIS_DB', 0))
+
+# LOCAL_REDIS = bool(os.getenv('LOCAL_REDIS', 'True') in ("True", "true"))
 BROKER_TYPE = str(os.getenv('BROKER_TYPE', 'REDIS'))
 BROKER_HOST = str(os.getenv('BROKER_HOST', 'localhost'))
 BROKER_PORT = int(os.getenv('BROKER_PORT', 6379))
