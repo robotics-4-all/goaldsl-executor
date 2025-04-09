@@ -89,7 +89,7 @@ class CodeRunner:
         self.force_exit()
 
     def _run_subprocess(self, wait: bool = True):
-        logging.info(f"Running Subprocess {self._uid} with flag wait={wait}...")
+        logging.debug(f"Running Subprocess {self._uid} with flag wait={wait}...")
         self._process = subprocess.Popen(
             ["python3", "-c", self._code],
             env={**os.environ.copy(), "U_ID": self._uid},
@@ -99,14 +99,14 @@ class CodeRunner:
             text=True,
             bufsize=1
         )
-        logging.info("Process started successfully")
+        logging.debug("Process started successfully")
         self._stdout_thread = threading.Thread(target=stream_logger,
                                                args=(self._process.stdout, logging.info))
         self._stderr_thread = threading.Thread(target=stream_logger,
                                                args=(self._process.stderr, logging.error))
         self._stdout_thread.start()
         self._stderr_thread.start()
-        logging.info("Started logging threads")
+        logging.debug("Started logging threads")
         if wait:
             logging.warning(f"Waiting for Coderunner <UID:{self._uid}> to terminate")
             self._process.wait()
@@ -127,7 +127,7 @@ class CodeRunner:
         if self._process.returncode != 0:
             logging.error(f"Subprocess failed with return code {self._process.returncode}")
         else:
-            logging.info("Subprocess completed successfully!")
+            logging.debug("Subprocess completed successfully!")
 
 
 class GoalDSLExecutorNode(Node):
@@ -168,8 +168,8 @@ class GoalDSLExecutorNode(Node):
                 self._runners.remove(runner)
 
     def report_conn_params(self):
-        logging.info("Connection parameters:")
-        logging.info(self._conn_params)
+        logging.debug("Connection parameters:")
+        logging.debug(self._conn_params)
 
     def _init_endpoints(self):
         execute_model_rpc = self.create_rpc(
@@ -177,25 +177,25 @@ class GoalDSLExecutorNode(Node):
             rpc_name=config.EXECUTE_MODEL_RPC,
             on_request=self.on_request_model_execution
         )
-        logging.info(f"Registered RPC endpoint: {config.EXECUTE_MODEL_RPC}")
+        logging.debug(f"Registered RPC endpoint: {config.EXECUTE_MODEL_RPC}")
         killall_goals_rpc = self.create_rpc(
             msg_type=KillAllRPCMsg,
             rpc_name=config.KILL_ALL_GOALS_RPC,
             on_request=self.on_request_killall
         )
-        logging.info(f"Registered RPC endpoint: {config.KILL_ALL_GOALS_RPC}")
+        logging.debug(f"Registered RPC endpoint: {config.KILL_ALL_GOALS_RPC}")
         execute_model_async_endpoint = self.create_subscriber(
             topic=config.EXECUTE_MODEL_SUB,
             on_message=self.on_message_execute_model,
             msg_type=ExecuteModelAsyncMsg
         )
-        logging.info(f"Registered Subscriber endpoint: {config.EXECUTE_MODEL_SUB}")
+        logging.debug(f"Registered Subscriber endpoint: {config.EXECUTE_MODEL_SUB}")
         kill_all_goals_sub = self.create_subscriber(
             topic=config.KILL_ALL_GOALS_SUB,
             on_message=self.on_message_killall,
             msg_type=KillAllAsyncMsg
         )
-        logging.info(f"Registered Subscriber endpoint: {config.KILL_ALL_GOALS_SUB}")
+        logging.debug(f"Registered Subscriber endpoint: {config.KILL_ALL_GOALS_SUB}")
         self._execute_model_endpoint = execute_model_rpc
         self._execute_model_async_endpoint = execute_model_async_endpoint
         self._kill_all_goals_sub = kill_all_goals_sub
@@ -227,7 +227,7 @@ class GoalDSLExecutorNode(Node):
             logging.error(f"Error deploying model: {e}", exc_info=False)
 
     def on_message_killall(self, msg: KillAllAsyncMsg):
-        logging.warning("Received KillAll request!!!")
+        logging.warning("Received KillAll request!")
         try:
             self._killall_goals()
         except Exception as e:
@@ -239,9 +239,9 @@ class GoalDSLExecutorNode(Node):
             runner.force_exit()
 
     def _deploy_model(self, model_str: str):
-        logging.info("Running code-generator on input model")
+        logging.info("Running M2T transformation on input model")
         scenario_code: dict = m2t_python_str(model_str)
-        logging.info("Running code-runner on generated code")
+        logging.info("M2T Transformation finished")
         for name, code in scenario_code.items():
             code_runner = CodeRunner(code)
             code_runner.run(wait=config.WAIT_FOR_EXECUTION_TERMINATION)
