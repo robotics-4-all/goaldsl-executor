@@ -10,7 +10,7 @@ import time
 from commlib.node import Node
 from commlib.utils import Rate
 from commlib.msg import RPCMessage, PubSubMessage
-from goal_dsl.generator import m2t_python_str
+from goal_dsl.transformations import m2t_python_str
 import config as config
 import logging
 
