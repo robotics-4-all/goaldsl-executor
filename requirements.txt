@@ -1,1 +1,25 @@
+annotated-types==0.8.0
+certifi==2026.7.22
+charset-normalizer==3.5.2
+# `mqtt`/`redis` extras supply the transports executor.py imports per
+# BROKER_TYPE and USE_REDIS. Add `amqp`/`kafka` if those broker types are used.
+commlib-py[mqtt,redis]==0.13.2
+goalee @ https://github.com/robotics-4-all/goalee/archive/devel.zip#sha256=272a28331097d879eecd0544a85f4c06904da81dc0ce5eaccf88f86255dca3fc
+# `master` provides the `goal_dsl` import package; `devel` is the renamed
+# `telos` package and is not import compatible.
+goaldsl @ git+https://github.com/robotics-4-all/goal-dsl.git@master
+idna==3.20
+markdown-it-py==4.2.0
+mdurl==0.1.2
+packaging==26.3
+pydantic==2.14.1
+pydantic_core==2.50.1
+Pygments==2.21.0
 python-dotenv==1.0.1
+requests==2.34.2
+rich==15.0.0
+typing-inspection==0.4.4
+typing_extensions==4.16.0
+ujson==6.0.0
+urllib3==2.8.0
+wheel==0.48.0

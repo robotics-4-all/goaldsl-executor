@@ -1,14 +1,25 @@
 UID=123
 
 # Broker Parameters
-LOCAL_REDIS=True
-
 BROKER_TYPE=MQTT
 BROKER_HOST=localhost
 BROKER_PORT=1883
 BROKER_SSL=True
 BROKER_USERNAME=guest
 BROKER_PASSWORD=guest
+
+# Redis Parameters
+# Used by the executor's own Redis node. Set USE_REDIS=False to disable it,
+# e.g. when BROKER_TYPE is MQTT/AMQP and no local Redis is required.
+USE_REDIS=True
+REDIS_HOST=localhost
+REDIS_PORT=6379
+# Leave REDIS_USERNAME empty to authenticate as the default Redis user
+# (i.e. a server configured with `requirepass`). Set it only for Redis
+# ACL users (Redis >= 6).
+REDIS_USERNAME=
+REDIS_PASSWORD=
+REDIS_DB=0
 
 # Logging Parameters
 GOALDSL_ZERO_LOGS=0

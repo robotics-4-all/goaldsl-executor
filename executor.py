@@ -168,8 +168,13 @@ class GoalDSLExecutorNode(Node):
                 self._runners.remove(runner)
 
     def report_conn_params(self):
-        logging.debug("Connection parameters:")
-        logging.debug(self._conn_params)
+        params = self._conn_params
+        if params is None:
+            return
+        # Never leak credentials (e.g. Redis/MQTT password) into the logs
+        if getattr(params, 'password', ''):
+            params = params.model_copy(update={'password': '***'})
+        logging.debug(f"Connection parameters: {params}")
 
     def _init_endpoints(self):
         execute_model_rpc = self.create_rpc(

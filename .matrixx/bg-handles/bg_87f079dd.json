@@ -1,0 +1,17 @@
+{
+  "taskId": "bg_87f079dd",
+  "parentSessionID": "ses_ec0e3cc9affee1vMn9sFjyi9Kn",
+  "parentMessageID": "msg_13f211efc001E7iCZ2b3qbCdB9",
+  "description": "Find goal-dsl PyPI packaging",
+  "agent": "operator",
+  "status": "cancelled",
+  "sessionID": "ses_ec0deb987ffehrNXHicDiayClv",
+  "model": {
+    "providerID": "opencode",
+    "modelID": "space-bunny-free"
+  },
+  "concurrencyGroup": "opencode/space-bunny-free",
+  "queuedAt": 1792060507761,
+  "startedAt": 1792060507771,
+  "completedAt": 1792060653970
+}

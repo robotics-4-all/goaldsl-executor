@@ -3,14 +3,22 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-USE_REDIS = int(os.getenv('USE_REDIS', 1))
-REDIS_HOST = os.getenv('REDIS_HOST', 'localhost')
+
+def _env_bool(name: str, default: str = 'False') -> bool:
+    """Parse a boolean flag from the environment.
+
+    Accepts the usual truthy spellings so that e.g. `USE_REDIS=True` does not crash.
+    """
+    return str(os.getenv(name, default)).strip().lower() in ('1', 'true', 'yes', 'on')
+
+
+# Redis Parameters (used for the local/executor node)
+USE_REDIS = _env_bool('USE_REDIS', 'True')
+REDIS_HOST = str(os.getenv('REDIS_HOST', 'localhost'))
 REDIS_PORT = int(os.getenv('REDIS_PORT', 6379))
-REDIS_USERNAME = os.getenv('REDIS_USERNAME', '')
+REDIS_USERNAME = str(os.getenv('REDIS_USERNAME', '')).strip()
 REDIS_PASSWORD = os.getenv('REDIS_PASSWORD', '')
 REDIS_DB = int(os.getenv('REDIS_DB', 0))
-
-# LOCAL_REDIS = bool(os.getenv('LOCAL_REDIS', 'True') in ("True", "true"))
 BROKER_TYPE = str(os.getenv('BROKER_TYPE', 'REDIS'))
 BROKER_HOST = str(os.getenv('BROKER_HOST', 'localhost'))
 BROKER_PORT = int(os.getenv('BROKER_PORT', 6379))
