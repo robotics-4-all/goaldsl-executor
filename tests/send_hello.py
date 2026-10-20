@@ -1,10 +1,12 @@
 #!/usr/bin/env python
 
+import os
 import sys
 import time
 
 from commlib.msg import RPCMessage
 from commlib.node import Node
+from dotenv import load_dotenv
 
 
 class ExecuteModelMsg(RPCMessage):
@@ -17,6 +19,9 @@ class ExecuteModelMsg(RPCMessage):
 
 
 if __name__ == "__main__":
+    # Load the repository .env while allowing shell variables to override it.
+    load_dotenv()
+
     if len(sys.argv) < 2:
         broker = "redis"
     else:
@@ -30,7 +35,16 @@ if __name__ == "__main__":
     else:
         print("Not a valid broker-type was given!")
         sys.exit(1)
-    conn_params = ConnectionParameters()
+
+    if broker == "redis":
+        conn_params = ConnectionParameters(
+            host=os.getenv("REDIS_HOST", "localhost"),
+            port=int(os.getenv("REDIS_PORT", "6379")),
+            username=os.getenv("REDIS_USERNAME", ""),
+            password=os.getenv("REDIS_PASSWORD", ""),
+        )
+    else:
+        conn_params = ConnectionParameters()
 
     node = Node(
         node_name="test_hello",
@@ -40,9 +54,12 @@ if __name__ == "__main__":
         debug=True,
     )
 
-    rpc = node.create_rpc_client(
-        msg_type=ExecuteModelMsg, rpc_name="goaldsl.6530f9263773c5f7858b6b33.deploy_sync"
-    )
+    uid = os.getenv("UID", "TEST")
+    rpc_name = os.getenv(
+        "EXECUTE_MODEL_RPC", "goaldsl.{ID}.deploy_sync"
+    ).replace("{ID}", uid)
+    print(f"Calling RPC: {rpc_name}")
+    rpc = node.create_rpc_client(msg_type=ExecuteModelMsg, rpc_name=rpc_name)
 
     node.run()
 

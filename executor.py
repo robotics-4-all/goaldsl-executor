@@ -5,12 +5,14 @@ import random
 import string
 import subprocess
 import sys
+import tempfile
 import threading
 import time
 from commlib.node import Node
 from commlib.utils import Rate
 from commlib.msg import RPCMessage, PubSubMessage
-from goal_dsl.transformations import m2t_python_str
+from goal_dsl.language import GoalDSLMetaModel
+from goal_dsl.transformations.m2t_python import _generate_internal
 import config as config
 import logging
 
@@ -24,6 +26,30 @@ else: logging.getLogger().setLevel(config.LOG_LEVEL)
 def stream_logger(stream, log_func):
     for line in iter(stream.readline, ""):
         log_func(line.strip())
+
+
+def transform_model(model_str: str) -> dict:
+    """Transform model text into executable scenario code.
+
+    The upstream ``m2t_python_str`` helper loses the source text while
+    processing multi-line conditions.  GoalDSL then tries to call ``split``
+    on ``None``.  Parsing through a temporary file preserves source location
+    information, so condition definitions can be recovered correctly.
+    """
+    with tempfile.NamedTemporaryFile(
+        mode="w", suffix=".goal", encoding="utf-8", delete=False
+    ) as model_file:
+        model_file.write(model_str)
+        model_path = model_file.name
+
+    try:
+        model = GoalDSLMetaModel.model_from_file(model_path)
+        return _generate_internal(model)
+    finally:
+        try:
+            os.unlink(model_path)
+        except OSError:
+            logging.warning("Could not remove temporary GoalDSL model file")
 
 
 class ExecuteModelMsg(RPCMessage):
@@ -245,7 +271,7 @@ class GoalDSLExecutorNode(Node):
 
     def _deploy_model(self, model_str: str):
         logging.info("Running M2T transformation on input model")
-        scenario_code: dict = m2t_python_str(model_str)
+        scenario_code: dict = transform_model(model_str)
         logging.info("M2T Transformation finished")
         for name, code in scenario_code.items():
             code_runner = CodeRunner(code)

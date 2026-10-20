@@ -1,12 +1,3 @@
-Broker<MQTT> LocsysMQTT
-    host: 'locsys.issel.ee.auth.gr'
-    port: 8883
-    ssl: true
-    auth:
-        username: 'sensors'
-        password: 'issel.sensors'
-end
-
 Broker<MQTT> HomeMQTT
     host: 'localhost'
     port: 1883
@@ -15,68 +6,65 @@ Broker<MQTT> HomeMQTT
         password: ''
 end
 
-Broker<Redis> LocalRedis
-    host: 'localhost'
-    port: 6379
-    ssl: false
-    auth:
-        username: ''
-        password: ''
-end
-
-Entity Robot1Pose
+Entity TempSensor1
     type: sensor
-    topic: 'robot_1.pose'
-    source: LocalRedis
+    uri: 'bedroom.sensor.temperature'
+    source: HomeMQTT
     attributes:
-        - position: dict
-        - orientation: dict
+        - temp: float
 end
 
-Entity Robot2Pose
+Entity TempSensor2
     type: sensor
-    topic: 'robot_2.pose'
-    source: LocalRedis
+    uri: 'bathroom.sensor.temperature'
+    source: HomeMQTT
     attributes:
-        - position: dict
-        - orientation: dict
+        - temp: float
 end
 
-Goal<CircularArea> Goal_1
-    center: Point3D(5, 0, 0)
-    radius: 0.2
-    tag: ENTER
+Entity TempSensor3
+    type: sensor
+    uri: 'livingroom.sensor.temperature'
+    source: HomeMQTT
+    attributes:
+        - temp: float
 end
 
-Goal<CircularArea> Goal_2
-    center: Point3D(5, 5, 0)
-    radius: 0.2
-    tag: ENTER
+Entity AirQualitySensor1
+    type: sensor
+    uri: 'kitchen.sensor.airq'
+    source: HomeMQTT
+    attributes:
+        - gas: float
+        - humidity: float
 end
 
-Goal<CircularArea> Goal_3
-    center: Point3D(0, 5, 0)
-    radius: 0.2
-    tag: ENTER
+Goal<EntityStateChange> Goal_1
+    entity: TempSensor1
 end
 
-Goal<CircularArea> Goal_4
-    center: Point3D(0, 0, 0)
-    radius: 0.2
-    tag: ENTER
+Goal<EntityStateCondition> Goal_2
+    condition:
+        (AirQualitySensor1.gas < 10) and
+        (AirQualitySensor1.humidity < 30)
 end
 
-RTMonitor
-    broker: LocalRedis
-    eventTopic: "goaldsl.{U_ID}.event"
-    logsTopic: "goaldsl.{U_ID}.log"
+Goal<EntityStateCondition> Goal_3
+    condition: (TempSensor1.temp > 10) and
+    (TempSensor2.temp > 10) and
+    (TempSensor3.temp > 10)
 end
 
-Scenario DoRectangleScenario
+Goal<Complex> CG1
     goals:
         - Goal_1
         - Goal_2
         - Goal_3
-        - Goal_4
+    strategy: ALL_ACCOMPLISHED_ORDERED
+end
+
+Scenario MyScenario
+    goals:
+        - CG1
     concurrent: False
 end
